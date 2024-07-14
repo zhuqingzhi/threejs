@@ -38,4 +38,9 @@ export function initThreeStage() {
     renderer.render(scene, camera);
   }
   animate();
+  return {
+    scene,
+    camera,
+    renderer,
+  };
 }
