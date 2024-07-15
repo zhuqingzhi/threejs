@@ -6,6 +6,7 @@ import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import * as THREE from "three";
 import { Water } from "three/examples/jsm/objects/Water2";
+import gsap from "gsap";
 function loadSceneModel(scene) {
   console.log("loadSceneModel");
 
@@ -25,6 +26,10 @@ function loadSceneModel(scene) {
     model.traverse((child) => {
       if (child.name === "Plane") {
         child.visible = false;
+      }
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
       }
     });
     scene.add(gltf.scene);
@@ -61,7 +66,7 @@ function loadWater(scene) {
     fog: scene.fog !== undefined,
   });
   water.rotation.x = -Math.PI / 2;
-  water.position.y = -0.4;
+  water.position.y = -0.8;
   scene.add(water);
 }
 
@@ -69,6 +74,8 @@ onMounted(() => {
   const { scene, camera, renderer } = initThreeStage();
   // 设置色调映射
   renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.physicallyCorrectLights = true;
+  renderer.shadowMap.enabled = true;
   scene.toneMapping = THREE.ACESFilmicToneMapping;
   scene.toneMappingExposure = 1;
   loadSceneModel(scene);
@@ -80,7 +87,71 @@ onMounted(() => {
   loadPanorama(scene);
   // 加载水面
   loadWater(scene);
+  // 创建光源
+  createLights(scene);
 });
+
+function createLights(scene) {
+  // 在房子内创建点光源
+  const pointLightInHouse = new THREE.PointLight(0xffffff, 50);
+  pointLightInHouse.position.set(0.1, 2, 0);
+  pointLightInHouse.castShadow = true;
+  scene.add(pointLightInHouse);
+
+  // 创建运动光源
+  const radius = 3;
+  const spotLights = [];
+  const spotLightsGroup = new THREE.Group();
+  spotLightsGroup.position.set(-8, 2.5, -1.5);
+  for (var i = 0; i < 3; i++) {
+    const pointLight = new THREE.PointLight(0xffffff, 20);
+    pointLight.shadow.mapSize.set(1024, 1024);
+    pointLight.shadow.radius = 10;
+    pointLight.position.set(0, 0, 0);
+    // pointLight.castShadow = true;//会导致阴影混乱的感觉，为什么开启阴影会这样
+    const sphereGeometry = new THREE.SphereGeometry(0.2, 32, 32);
+    const shpereMesh = new THREE.Mesh(
+      sphereGeometry,
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xffffff,
+        emissiveIntensity: 1,
+      })
+    );
+    spotLights.push(shpereMesh); //圆球里放置灯光，保存圆球，通过圆球进行控制
+    shpereMesh.position.set(
+      radius * Math.cos((i * 2 * Math.PI) / 3),
+      Math.cos((i * 2 * Math.PI) / 3),
+      radius * Math.sin((i * 2 * Math.PI) / 3)
+    );
+    shpereMesh.add(pointLight);
+    spotLightsGroup.add(shpereMesh);
+  }
+  scene.add(spotLightsGroup);
+
+  // 创建运动
+  const options = {
+    angle: 0,
+  };
+  gsap.to(options, {
+    duration: 10,
+    angle: Math.PI * 2,
+    ease: "linear",
+    repeat: -1,
+    onUpdate: () => {
+      // angle和options里的angle要同字段名
+      // 仅更新z轴旋转，x,y由组去控制
+      spotLightsGroup.rotation.y = options.angle;
+      spotLights.forEach((light, index) => {
+        light.position.set(
+          radius * Math.cos((index * 2 * Math.PI) / 3),
+          Math.cos((index * 2 * Math.PI) / 3 + options.angle * 5),
+          radius * Math.sin((index * 2 * Math.PI) / 3)
+        );
+      });
+    },
+  });
+}
 </script>
 
 <template>
