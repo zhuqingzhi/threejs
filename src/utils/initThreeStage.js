@@ -42,5 +42,6 @@ export function initThreeStage() {
     scene,
     camera,
     renderer,
+    controls,
   };
 }

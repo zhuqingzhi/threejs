@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from "vue";
+import { onMounted, watchEffect, ref, watch } from "vue";
 import { initThreeStage } from "@/utils/initThreeStage";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
@@ -29,7 +29,7 @@ function loadSceneModel(scene) {
       }
       if (child.isMesh) {
         child.castShadow = true;
-        child.receiveShadow = true;
+        child.receiveShadow = true; // 让所有元素都能对阴影产生影响
       }
     });
     scene.add(gltf.scene);
@@ -69,9 +69,10 @@ function loadWater(scene) {
   water.position.y = -0.8;
   scene.add(water);
 }
+const sceneIndex = ref(0);
 
 onMounted(() => {
-  const { scene, camera, renderer } = initThreeStage();
+  const { scene, camera, renderer, controls } = initThreeStage();
   // 设置色调映射
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.physicallyCorrectLights = true;
@@ -89,6 +90,8 @@ onMounted(() => {
   loadWater(scene);
   // 创建光源
   createLights(scene);
+  // 监听鼠标滚动
+  addMouseWheelEvent(scene, camera, controls);
 });
 
 function createLights(scene) {
@@ -152,15 +155,112 @@ function createLights(scene) {
     },
   });
 }
+
+const timeline1 = new gsap.timeline();
+const timeline2 = new gsap.timeline();
+function setCamera(camera, control, position, target) {
+  console.log("设置镜头", position, target);
+  timeline1.to(camera.position, {
+    duration: 1,
+    ease: "linear",
+    x: position[0],
+    y: position[1],
+    z: position[2],
+  });
+  /* timeline2.to(control.target, {
+    duration: 1,
+    ease: "linear",
+    x: target[0],
+    y: target[1],
+    z: target[2],
+  }); */
+  //   camera.position.set(...position);
+  camera.lookAt(target);
+}
+const stages = [
+  {
+    text: "场景1",
+    calback: (camera, control) => {
+      setCamera(camera, control, [-3.23, 3, 4.06], [-8, 2, 0]);
+    },
+  },
+  {
+    text: "场景2",
+    calback: (camera, control) => {
+      setCamera(camera, control, [7, 0, 23], [0, 0, 0]);
+    },
+  },
+  {
+    text: "场景3",
+    calback: (camera, control) => {
+      setCamera(camera, control, [10, 3, 0], [5, 2, 0]);
+    },
+  },
+  {
+    text: "场景4",
+    calback: (camera, control) => {
+      setCamera(camera, control, [7, 0, 23], [5, 2, 0]);
+    },
+  },
+  {
+    text: "场景5",
+    calback: (camera, control) => {
+      setCamera(camera, control, [-20, 1.3, 6.6], [5, 2, 0]);
+    },
+  },
+];
+
+function addMouseWheelEvent(scene, camera, control) {
+  let lock = false;
+  window.addEventListener("wheel", (e) => {
+    console.log("dddd", sceneIndex.value);
+    if (lock) return;
+    lock = true;
+    stages[sceneIndex.value].calback(camera, control);
+    sceneIndex.value++;
+    if (sceneIndex.value >= stages.length) {
+      sceneIndex.value = 0;
+    }
+    setTimeout(() => {
+      lock = false;
+    }, 1000);
+  });
+}
+
+function getStyle(item, index) {
+  return {
+    display: sceneIndex.value === index ? "block" : "none",
+  };
+}
 </script>
 
 <template>
-  <div class="container"></div>
+  <div class="container">
+    <div class="stageList">
+      <div
+        class="stage-item"
+        v-for="(item, index) in stages"
+        :key="index"
+        :style="getStyle(item, index)"
+      >
+        <span>{{ item.text }}</span>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
 .container {
   width: 100vw;
   height: 100vh;
+  position: relative;
+}
+.stageList {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: #fff;
+  font-size: 50px;
+  text-align: left;
 }
 </style>
