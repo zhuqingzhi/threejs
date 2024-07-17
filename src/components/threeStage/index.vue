@@ -70,9 +70,14 @@ function loadWater(scene) {
   scene.add(water);
 }
 const sceneIndex = ref(0);
-
+const _scene = ref(null);
+const _camera = ref(null);
+const _renderer = ref(null);
 onMounted(() => {
   const { scene, camera, renderer, controls } = initThreeStage();
+  _camera.value = camera;
+  _scene.value = scene;
+  _renderer.value = renderer;
   // 设置色调映射
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.physicallyCorrectLights = true;
@@ -92,6 +97,8 @@ onMounted(() => {
   createLights(scene);
   // 监听鼠标滚动
   addMouseWheelEvent(scene, camera, controls);
+  createStars(scene);
+  createHeartCurve();
 });
 
 function createLights(scene) {
@@ -180,19 +187,20 @@ function setCamera(camera, control, position, target) {
 const stages = [
   {
     text: "场景1",
-    calback: (camera, control) => {
+    calback: (camera, control, scene) => {
       setCamera(camera, control, [-3.23, 3, 4.06], [-8, 2, 0]);
     },
   },
   {
     text: "场景2",
-    calback: (camera, control) => {
-      setCamera(camera, control, [7, 0, 23], [0, 0, 0]);
+    calback: (camera, control, scene) => {
+      setCamera(camera, control, [7, 0, 40], [0, 0, 0]);
+      drawHeart(scene, camera);
     },
   },
   {
     text: "场景3",
-    calback: (camera, control) => {
+    calback: (camera, control, scene) => {
       setCamera(camera, control, [10, 3, 0], [5, 2, 0]);
     },
   },
@@ -204,8 +212,9 @@ const stages = [
   },
   {
     text: "场景5",
-    calback: (camera, control) => {
+    calback: (camera, control, scene) => {
       setCamera(camera, control, [-20, 1.3, 6.6], [5, 2, 0]);
+      restoreHeart(camera, scene);
     },
   },
 ];
@@ -216,7 +225,7 @@ function addMouseWheelEvent(scene, camera, control) {
     console.log("dddd", sceneIndex.value);
     if (lock) return;
     lock = true;
-    stages[sceneIndex.value].calback(camera, control);
+    stages[sceneIndex.value].calback(camera, control, scene);
     sceneIndex.value++;
     if (sceneIndex.value >= stages.length) {
       sceneIndex.value = 0;
@@ -231,6 +240,115 @@ function getStyle(item, index) {
   return {
     display: sceneIndex.value === index ? "block" : "none",
   };
+}
+
+const startPositions = [];
+const endPositions = [];
+let starInstance = null;
+function createStars(scene) {
+  starInstance = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.1, 16, 16),
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 1000,
+    }),
+    50
+  );
+  for (var i = 0; i < 50; i++) {
+    const x = -Math.random() * 100 - 50;
+    const y = Math.random() * 100 + 10;
+    const z = -Math.random() * 100;
+    const position = new THREE.Vector3(x, y, z);
+    startPositions.push(position);
+    starInstance.setMatrixAt(i, new THREE.Matrix4().setPosition(position));
+  }
+  scene.add(starInstance);
+}
+function createHeartCurve() {
+  const center = new THREE.Vector3(0, 2, 10);
+
+  const heartCurve = new THREE.Shape();
+  heartCurve.moveTo(25, 25);
+  heartCurve.bezierCurveTo(25, 25, 20, 0, 0, 0);
+  heartCurve.bezierCurveTo(-30, 0, -30, 35, -30, 35);
+  heartCurve.bezierCurveTo(-30, 55, -10, 77, 25, 95);
+  heartCurve.bezierCurveTo(60, 77, 80, 55, 80, 35);
+  heartCurve.bezierCurveTo(80, 35, 80, 0, 50, 0);
+  heartCurve.bezierCurveTo(35, 0, 25, 25, 25, 25);
+  for (var i = 0; i < 50; i++) {
+    const point = heartCurve.getPointAt(i / 50);
+    endPositions.push(
+      new THREE.Vector3(
+        point.x * 0.1 + center.x,
+        point.y * 0.1 + center.y,
+        center.z
+      )
+    );
+  }
+  return heartCurve;
+}
+function changeShape() {
+  console.log("绘制形状");
+  drawHeart(_camera.value, _camera.value);
+}
+
+function drawHeart(scene, camera) {
+  console.log("drawHeart", startPositions, endPositions, starInstance);
+  let params = {
+    time: 0,
+  };
+  gsap.to(params, {
+    time: 1,
+    duration: 1,
+    onUpdate: () => {
+      //此处回调返回参数为空
+      // 更新星星位置
+      for (var i = 0; i < 50; i++) {
+        const position = new THREE.Vector3();
+        const x =
+          startPositions[i].x +
+          (endPositions[i].x - startPositions[i].x) * params.time;
+        const y =
+          startPositions[i].y +
+          (endPositions[i].y - startPositions[i].y) * params.time;
+        const z =
+          startPositions[i].z +
+          (endPositions[i].z - startPositions[i].z) * params.time;
+        position.set(x, y, z);
+        starInstance.setMatrixAt(i, new THREE.Matrix4().setPosition(position));
+      }
+      starInstance.instanceMatrix.needsUpdate = true; // 需要设置
+    },
+  });
+}
+function restoreHeart(scene, camera) {
+  let params = {
+    time: 0,
+  };
+  gsap.to(params, {
+    time: 1,
+    duration: 1,
+    onUpdate: () => {
+      //此处回调返回参数为空
+      // 更新星星位置
+      for (var i = 0; i < 50; i++) {
+        const position = new THREE.Vector3();
+        const x =
+          endPositions[i].x +
+          (-endPositions[i].x + startPositions[i].x) * params.time;
+        const y =
+          endPositions[i].y +
+          (-endPositions[i].y + startPositions[i].y) * params.time;
+        const z =
+          endPositions[i].z +
+          (-endPositions[i].z + startPositions[i].z) * params.time;
+        position.set(x, y, z);
+        starInstance.setMatrixAt(i, new THREE.Matrix4().setPosition(position));
+      }
+      starInstance.instanceMatrix.needsUpdate = true; // 需要设置
+    },
+  });
 }
 </script>
 
