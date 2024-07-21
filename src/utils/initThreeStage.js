@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { onMounted } from "vue";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-export function initThreeStage() {
+export function initThreeStage(options) {
+  const { showAxes = true, showGrid = false } = options;
   // 创建场景
   const scene = new THREE.Scene();
   // 创建相机
@@ -28,8 +29,16 @@ export function initThreeStage() {
   controls.dampingFactor = 0.05;
 
   // 创建坐标轴
-  const axesHelper = new THREE.AxesHelper(5);
-  scene.add(axesHelper);
+  if (showAxes) {
+    const axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
+  }
+  // 创建网格
+  let gridHelper;
+  if (showGrid) {
+    gridHelper = new THREE.GridHelper(20, 20);
+    scene.add(gridHelper);
+  }
 
   // 渲染
   function animate() {
@@ -43,5 +52,6 @@ export function initThreeStage() {
     camera,
     renderer,
     controls,
+    gridHelper,
   };
 }
