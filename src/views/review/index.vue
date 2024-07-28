@@ -110,6 +110,15 @@ onMounted(() => {
       planeMaterial.lightMap = val ? lightMap : null;
       planeMaterial.needsUpdate = true;
     });
+  texture.colorSpace = THREE.SRGBColorSpace;
+  gui
+    .add(texture, "colorSpace", {
+      linear: THREE.LinearSRGBColorSpace,
+      SRGB: THREE.SRGBColorSpace,
+    })
+    .onChange(() => {
+      texture.needsUpdate = true;
+    });
 });
 </script>
 <style lang="scss" scoped></style>
