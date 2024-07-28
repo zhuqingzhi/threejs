@@ -12,6 +12,7 @@ const camera = ref(null);
 const renderer = ref(null);
 const controls = ref(null);
 const gridHelper = ref(null);
+const gui = ref(null);
 const props = defineProps({
   showGrid: {
     type: Boolean,
@@ -32,6 +33,7 @@ onMounted(() => {
   renderer.value = stageInfo.renderer;
   controls.value = stageInfo.controls;
   gridHelper.value = stageInfo.gridHelper;
+  gui.value = stageInfo.gui;
 });
 defineExpose({
   scene,
@@ -39,6 +41,7 @@ defineExpose({
   renderer,
   controls,
   gridHelper,
+  gui,
 });
 </script>
 

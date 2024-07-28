@@ -1,9 +1,11 @@
 import * as THREE from "three";
 import { onMounted } from "vue";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 
 export function initThreeStage(options) {
   const { showAxes = true, showGrid = false } = options;
+  const gui = new GUI();
   // 创建场景
   const scene = new THREE.Scene();
   // 创建相机
@@ -53,5 +55,6 @@ export function initThreeStage(options) {
     renderer,
     controls,
     gridHelper,
+    gui,
   };
 }

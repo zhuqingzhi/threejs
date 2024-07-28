@@ -13,6 +13,10 @@ const routes = [
     path: "/three-car",
     component: () => import("@/views/carView/index.vue"),
   },
+  {
+    path: "/three-review",
+    component: () => import("@/views/review/index.vue"),
+  },
 ];
 
 const router = createRouter({
